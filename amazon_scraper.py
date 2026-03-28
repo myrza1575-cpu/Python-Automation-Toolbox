@@ -1,48 +1,40 @@
 import requests
-from bs4 import BeautifulSoup
-import json
+import time
 
-class AmazonScraper:
+class CryptoPriceMonitor:
     def __init__(self):
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US, en;q=0.5"
-        }
+        # API الرسمي لمنصة Binance (لا يحتاج مفتاح سري للمعلومات العامة)
+        self.base_url = "https://api.binance.com/api/v3/ticker/price"
+        self.assets = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT']
 
-    def fetch_product_details(self, url):
+    def get_live_prices(self):
+        print(f"--- Fetching Live Market Data ({time.strftime('%H:%M:%S')}) ---")
         try:
-            response = requests.get(url, headers=self.headers)
-            if response.status_code != 200:
-                print(f"Failed to retrieve data. Status code: {response.status_code}")
-                return None
-
-            soup = BeautifulSoup(response.content, "html.parser")
-            
-            product_data = {
-                "title": self._get_title(soup),
-                "price": self._get_price(soup),
-                "rating": self._get_rating(soup)
-            }
-            return product_data
+            for symbol in self.assets:
+                params = {'symbol': symbol}
+                response = requests.get(self.base_url, params=params)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    price = float(data['price'])
+                    print(f"Symbol: {symbol} | Price: ${price:,.2f}")
+                else:
+                    print(f"Could not fetch {symbol}. Status: {response.status_code}")
+                    
         except Exception as e:
-            print(f"Error occurred: {str(e)}")
-            return None
+            print(f"Connection Error: {e}")
 
-    def _get_title(self, soup):
-        title = soup.find("span", attrs={"id": 'productTitle'})
-        return title.text.strip() if title else "Title not found"
-
-    def _get_price(self, soup):
-        price = soup.find("span", class_="a-offscreen")
-        return price.text if price else "Price not found"
-
-    def _get_rating(self, soup):
-        rating = soup.find("i", class_="a-icon-star")
-        return rating.text if rating else "No rating"
+    def start_alert_system(self, interval=10):
+        # يقوم بتحديث الأسعار كل 10 ثوانٍ (كعرض تجريبي)
+        try:
+            for _ in range(5):
+                self.get_live_prices()
+                print("-" * 40)
+                time.sleep(interval)
+        except KeyboardInterrupt:
+            print("\nMonitoring stopped by user.")
 
 if __name__ == "__main__":
-    test_url = "https://www.amazon.com/dp/B08L5TNJHG"
-    scraper = AmazonScraper()
-    result = scraper.fetch_product_details(test_url)
-    if result:
-        print(json.dumps(result, indent=4))
+    monitor = CryptoPriceMonitor()
+    monitor.start_alert_system()
+
